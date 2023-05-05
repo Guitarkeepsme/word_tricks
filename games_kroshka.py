@@ -80,9 +80,10 @@ async def find_small(message: types.Message):
                         "что я могу вывести не более 200 слов, но каждый раз разных.", reply_markup=keyboard)
     await Forms.find_small.set()
 
-# @dp.message_handler(lambda message: message.text not in commands, state='*')
-# async def invalid_message(message: types.Message):
-#     return await message.reply("Не понимаю, о чём ты. Проверь, верно ли ты ввёл команду.")
+
+@dp.message_handler(lambda message: message.text not in commands, state=Forms.start)
+async def invalid_message(message: types.Message):
+    return await message.reply("Не понимаю, о чём ты. Проверь, верно ли ты ввёл команду.")
 
 
 @dp.message_handler(state=Forms.find_small)
@@ -127,8 +128,6 @@ async def words_sequence(message: types.Message, state: FSMContext):
     used_words = [message.text]
     answer = games_code.words_sequence(message.text, games_code.final_result, used_words)
     used_words.append(answer)
-    # async with state.proxy() as used_words:
-    #     used_words['words'] = words
     if message.text == "Вернуться":
         await Forms.start.set()
         await go_back
@@ -184,9 +183,21 @@ async def playing_words_sequence(message: types.Message, state: FSMContext):
                     async with state.proxy() as current_word:
                         current_word['word'] = answer
                 await message.reply("*" + answer + "*", parse_mode="Markdown", reply_markup=keyboard)
+                # start_timer = 30
+                # timer_message = await bot.send_message(chat_id=message.chat.id, text=f"Осталось {start_timer} секунд")
+                # zero_timer_check = 0
+                # for seconds_left in range(start_timer - 1, -1, -1):
+                #     await asyncio.sleep(1)
+                #     await timer_message.edit_text(f"Осталось *{seconds_left}* секунд", parse_mode="Markdown")
+                #     if seconds_left == 0:
+                #         zero_timer_check += 1
+                # if zero_timer_check == 1:
+                #     await bot.send_message(chat_id=message.chat.id, text="Время вышло. "
+                #                            "*Вы проиграли!*", parse_mode="Markdown", reply_markup=keyboard)
                 if len(answer) == 0:
-                    await message.reply("Я не могу найти ни одного подходящего слова, а это значит, что"
-                                        " вы победили. *Поздравляю!*", parse_mode="Markdown", reply_markup=keyboard)
+                    await bot.send_message(chat_id=message.chat.id, text="Я не могу найти ни одного подходящего слова, "
+                                                                         "а это значит, что вы победили. "
+                                           "*Поздравляю!*", parse_mode="Markdown", reply_markup=keyboard)
                 used_words.append(answer)
                 used_words.append(message.text)
                 await Forms.playing_words_sequence.set()

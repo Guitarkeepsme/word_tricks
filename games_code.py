@@ -1,6 +1,5 @@
 from random import randrange, randint
 
-
 with open('russian_nouns copy.json', 'r') as f:
     text = f.read()
 
@@ -56,6 +55,3 @@ def words_sequence(user_word, dictionary, used):
                 str(word).replace('ё', 'е')
                 words_list.append(word)
     return words_list[randrange(0, len(words_list))]
-
-
-print(words_sequence('цыпленок', final_result, []))
