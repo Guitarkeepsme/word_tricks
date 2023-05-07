@@ -21,12 +21,14 @@ class Forms(StatesGroup):
     playing_words_sequence = State()
 
 
-commands = ["Из большого слова маленькие", "Маленькое слово внутри больших", "Вернуться", "Игра в слова"]
+commands = ["Из большого слова маленькие", "Маленькое слово внутри больших", "Вернуться", "Игра в слова",
+            "Translate this message"]
 
 
 @dp.message_handler(Text(equals="Вернуться"), state='*')
 async def go_back(message: types.Message):
-    buttons = ["Из большого слова маленькие", "Маленькое слово внутри больших", "Игра в слова", "Вернуться"]
+    buttons = ["Из большого слова маленькие", "Маленькое слово внутри больших", "Игра в слова", "Вернуться",
+               "Translate this message"]
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     await Forms.start.set()
     keyboard.add(*buttons)
