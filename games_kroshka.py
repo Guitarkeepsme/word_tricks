@@ -198,7 +198,7 @@ async def playing_words_sequence(message: types.Message, state: FSMContext):
                 #                            "*Вы проиграли!*", parse_mode="Markdown", reply_markup=keyboard)
                 if len(answer) == 0:
                     await bot.send_message(chat_id=message.chat.id, text="Я не могу найти ни одного подходящего слова, "
-                                                                         "а это значит, что вы победили. "
+                                                                         "а это значит, что вы победили.\n\n\n"
                                            "*Поздравляю!*", parse_mode="Markdown", reply_markup=keyboard)
                 used_words.append(answer)
                 used_words.append(message.text)
