@@ -21,6 +21,10 @@ class Forms(StatesGroup):
     playing_words_sequence = State()
 
 
+class Words(StatesGroup):
+    used_words = []
+
+
 commands = ["Из большого слова маленькие", "Маленькое слово внутри больших", "Вернуться", "Игра в слова"]
 
 
@@ -124,10 +128,10 @@ async def words_sequence(message: types.Message, state: FSMContext):
     button = ["Вернуться"]
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     keyboard.add(*button)
-    global used_words
-    used_words = [message.text]
-    answer = games_code.words_sequence(message.text, games_code.final_result, used_words)
-    used_words.append(answer)
+
+    Words.used_words.append(message.text)
+    answer = games_code.words_sequence(message.text, games_code.final_result, Words.used_words)
+    Words.used_words.append(answer)
     if message.text == "Вернуться":
         await Forms.start.set()
         await go_back
@@ -157,7 +161,7 @@ async def playing_words_sequence(message: types.Message, state: FSMContext):
     if message.text.lower() not in games_code.final_result:
         await message.reply("Не знаю такого слова. Напиши другое.",
                             reply_markup=keyboard, parse_mode="Markdown")
-    elif message.text.lower() in used_words:
+    elif message.text.lower() in Words.used_words:
         await message.reply("Это уже было. Напиши другое слово.",
                             reply_markup=keyboard, parse_mode="Markdown")
     else:
@@ -168,8 +172,8 @@ async def playing_words_sequence(message: types.Message, state: FSMContext):
         else:
             await Forms.words_sequence.set()
             await state.update_data(word=check_word['word'])
-            answer = games_code.words_sequence(message.text, games_code.final_result, used_words)
-            used_words.append(answer)
+            answer = games_code.words_sequence(message.text, games_code.final_result, Words.used_words)
+            Words.used_words.append(answer)
 
             if message.text == "Вернуться":
                 await Forms.start.set()
@@ -198,8 +202,8 @@ async def playing_words_sequence(message: types.Message, state: FSMContext):
                     await bot.send_message(chat_id=message.chat.id, text="Я не могу найти ни одного подходящего слова, "
                                                                          "а это значит, что вы победили.\n\n\n"
                                            "*Поздравляю!*", parse_mode="Markdown", reply_markup=keyboard)
-                used_words.append(answer)
-                used_words.append(message.text)
+                Words.used_words.append(answer)
+                Words.used_words.append(message.text)
                 await Forms.playing_words_sequence.set()
 
 
