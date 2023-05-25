@@ -152,6 +152,7 @@ async def words_sequence(message: types.Message, state: FSMContext):
 
 @dp.message_handler(lambda message: message.text.lower(), state=Forms.playing_words_sequence)
 async def playing_words_sequence(message: types.Message, state: FSMContext):
+    Words.used_words.append(message.text)
     button = ["Вернуться"]
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     keyboard.add(*button)
