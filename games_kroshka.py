@@ -125,34 +125,39 @@ async def words_sequence(message: types.Message):
 
 @dp.message_handler(state=Forms.words_sequence)
 async def words_sequence(message: types.Message, state: FSMContext):
-    button = ["Вернуться"]
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-    keyboard.add(*button)
+    if message.text:
+        button = ["Вернуться"]
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+        keyboard.add(*button)
 
-    Words.used_words.append(message.text)
-    answer = games_code.words_sequence(message.text, games_code.final_result, Words.used_words)
-    Words.used_words.append(answer)
-    if message.text == "Вернуться":
-        await Forms.start.set()
-        await go_back
-    if message.text.lower() not in games_code.final_result:
-        await message.reply("Не знаю такого слова. Напиши другое.",
-                            reply_markup=keyboard, parse_mode="Markdown")
-    else:
-        if answer[-1] in games_code.banned_letters:
-            answer_cut = answer[:-1]
-            async with state.proxy() as current_word:
-                current_word['word'] = answer_cut
+        Words.used_words.append(message.text)
+        answer = games_code.words_sequence(message.text, games_code.final_result, Words.used_words)
+        Words.used_words.append(answer)
+        if message.text == "Вернуться":
+            await Forms.start.set()
+            await go_back
+        if message.text.lower() not in games_code.final_result:
+            await message.reply("Не знаю такого слова. Напиши другое.",
+                                reply_markup=keyboard, parse_mode="Markdown")
         else:
-            async with state.proxy() as current_word:
-                current_word['word'] = answer
-        await message.reply("*" + answer + "*", parse_mode="Markdown", reply_markup=keyboard)
-        await Forms.playing_words_sequence.set()
+            if answer[-1] in games_code.banned_letters:
+                answer_cut = answer[:-1]
+                async with state.proxy() as current_word:
+                    current_word['word'] = answer_cut
+            else:
+                async with state.proxy() as current_word:
+                    current_word['word'] = answer
+            await message.reply("*" + answer + "*", parse_mode="Markdown", reply_markup=keyboard)
+            await Forms.playing_words_sequence.set()
+    else:
+        button = ["Вернуться"]
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+        keyboard.add(*button)
+        await message.reply("Не понимаю, что это. Напиши слово.", reply_markup=keyboard, parse_mode="Markdown")
 
 
 @dp.message_handler(lambda message: message.text.lower(), state=Forms.playing_words_sequence)
 async def playing_words_sequence(message: types.Message, state: FSMContext):
-    Words.used_words.append(message.text)
     button = ["Вернуться"]
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     keyboard.add(*button)
@@ -166,6 +171,7 @@ async def playing_words_sequence(message: types.Message, state: FSMContext):
         await message.reply("Это уже было. Напиши другое слово.",
                             reply_markup=keyboard, parse_mode="Markdown")
     else:
+        Words.used_words.append(message.text)
         check_word = await state.get_data()
         if check_word['word'][-1] != message.text.lower()[0]:
             await message.reply("Это слово не подходит! Напиши слово на букву *" + str(check_word['word'][-1]) + "*",
