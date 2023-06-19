@@ -1,7 +1,11 @@
 from random import randrange, randint
+import json
 
 with open('russian_nouns copy.json', 'r') as f:
     text = f.read()
+with open('cities_list', 'r') as c_f:
+    cities_list = json.load(c_f)
+
 
 result_file = ''
 for line in text:
@@ -45,13 +49,29 @@ def words_sequence(user_word, dictionary, used):
     words_list = []
     str(user_word).replace('ё', 'е')
     for word in dictionary:
+        str(word).replace('ё', 'е')
         if word in used:
             continue
-        elif user_word.lower()[-1] in banned_letters:
-            if word[0] == user_word[-2]:
+        elif str(user_word.lower()[-1]) in banned_letters:
+            if str(word[0]).lower() == str(user_word[-2]).lower():
                 words_list.append(word)
         else:
-            if word[0] == user_word.lower()[-1]:
+            if str(word[0]).lower() == str(user_word.lower()[-1]):
                 str(word).replace('ё', 'е')
                 words_list.append(word)
     return words_list[randrange(0, len(words_list))]
+
+
+# def check_city(dictionary, user_word):
+#     counter = 0
+#     for word in dictionary:
+#         if str(word[0]).lower() == str(user_word.lower()[-1]):
+#             counter += 1
+#     return counter
+
+
+# print(check_city(cities_list, 'Человек'))
+print(words_sequence('марсель', cities_list, []))
+# print(len(cities_list))
+
+
