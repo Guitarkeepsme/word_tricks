@@ -61,17 +61,3 @@ def words_sequence(user_word, dictionary, used):
                 words_list.append(word)
     return words_list[randrange(0, len(words_list))]
 
-
-# def check_city(dictionary, user_word):
-#     counter = 0
-#     for word in dictionary:
-#         if str(word[0]).lower() == str(user_word.lower()[-1]):
-#             counter += 1
-#     return counter
-
-
-# print(check_city(cities_list, 'Человек'))
-print(words_sequence('марсель', cities_list, []))
-# print(len(cities_list))
-
-

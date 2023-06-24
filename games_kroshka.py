@@ -26,10 +26,11 @@ class Forms(StatesGroup):
 class Words(StatesGroup):
     used_words = []
     used_cities = []
+    hint_city = []
 
 
 commands = ["Из большого слова маленькие", "Маленькое слово внутри больших", "Вернуться", "Игра в слова",
-            "Игра в города"]
+            "Игра в города", "Взять подсказку"]
 
 
 @dp.message_handler(Text(equals="Вернуться"), state='*')
@@ -179,7 +180,7 @@ async def playing_words_sequence(message: types.Message, state: FSMContext):
         Words.used_words.append(message.text)
         check_word = await state.get_data()
         if check_word['word'][-1] != message.text.lower()[0]:
-            await message.reply("Это слово не подходит! Напиши слово на букву *" + str(check_word['word'][-1]) + "*",
+            await message.reply("Это слово не подходит! Напиши слово на букву *" + str(Words.used_cities[-1][-1]) + "*",
                                 reply_markup=keyboard, parse_mode="Markdown")
         else:
             await Forms.words_sequence.set()
@@ -199,17 +200,6 @@ async def playing_words_sequence(message: types.Message, state: FSMContext):
                     async with state.proxy() as current_word:
                         current_word['word'] = answer
                 await message.reply("*" + answer + "*", parse_mode="Markdown", reply_markup=keyboard)
-                # start_timer = 30
-                # timer_message = await bot.send_message(chat_id=message.chat.id, text=f"Осталось {start_timer} секунд")
-                # zero_timer_check = 0
-                # for seconds_left in range(start_timer - 1, -1, -1):
-                #     await asyncio.sleep(1)
-                #     await timer_message.edit_text(f"Осталось *{seconds_left}* секунд", parse_mode="Markdown")
-                #     if seconds_left == 0:
-                #         zero_timer_check += 1
-                # if zero_timer_check == 1:
-                #     await bot.send_message(chat_id=message.chat.id, text="Время вышло. "
-                #                            "*Вы проиграли!*", parse_mode="Markdown", reply_markup=keyboard)
                 if len(answer) == 0:
                     await bot.send_message(chat_id=message.chat.id, text="Я не могу найти ни одного подходящего слова, "
                                                                          "а это значит, что вы победили.\n\n\n"
@@ -217,6 +207,19 @@ async def playing_words_sequence(message: types.Message, state: FSMContext):
                 Words.used_words.append(answer)
                 Words.used_words.append(message.text)
                 await Forms.playing_words_sequence.set()
+
+
+@dp.message_handler(Text(equals="Взять подсказку"), state=Forms.playing_cities_sequence)
+async def hint(message: types.Message, state: FSMContext):
+    answer = games_code.words_sequence(Words.used_cities[-1], games_code.cities_list, Words.used_cities)
+    if answer[-1] in games_code.banned_letters:
+        Words.used_words.append(answer[:-1])
+    else:
+        Words.used_cities.append(answer)
+    async with state.proxy() as current_city:
+        current_city['city'] = answer
+    await message.reply("Моей подсказкой будет город " + "*" + str(answer) + "*" + ".\n\nПродолжаем!",
+                        parse_mode="Markdown")
 
 
 @dp.message_handler(Text(equals="Игра в города"), state=Forms.start)
@@ -241,12 +244,10 @@ async def cities_sequence(message: types.Message):
 @dp.message_handler(state=Forms.cities_sequence)
 async def cities_sequence(message: types.Message, state: FSMContext):
     if message.text:
-        button = ["Вернуться"]
+        button = ["Взять подсказку", "Вернуться"]
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
         keyboard.add(*button)
-        Words.used_cities.append(message.text)
         answer = games_code.words_sequence(message.text, games_code.cities_list, Words.used_cities)
-        Words.used_cities.append(answer)
         if message.text == "Вернуться":
             await Forms.start.set()
             await go_back
@@ -257,10 +258,12 @@ async def cities_sequence(message: types.Message, state: FSMContext):
             if answer[-1] in games_code.banned_letters:
                 answer_cut = answer[:-1]
                 async with state.proxy() as current_city:
-                    current_city['word'] = answer_cut
+                    current_city['city'] = answer_cut
             else:
                 async with state.proxy() as current_city:
-                    current_city['word'] = answer
+                    current_city['city'] = answer
+            Words.used_cities.append(message.text)
+            Words.used_cities.append(answer)
             await message.reply("*" + answer + "*", parse_mode="Markdown", reply_markup=keyboard)
             await Forms.playing_cities_sequence.set()
     else:
@@ -270,11 +273,14 @@ async def cities_sequence(message: types.Message, state: FSMContext):
         await message.reply("Не понимаю, что это. Напиши слово.", reply_markup=keyboard, parse_mode="Markdown")
 
 
-@dp.message_handler(lambda message: message.text.lower(), state=Forms.playing_cities_sequence)
+@dp.message_handler(lambda message: message.text, state=Forms.playing_cities_sequence)
 async def playing_cities_sequence(message: types.Message, state: FSMContext):
-    button = ["Вернуться"]
+    button = ["Взять подсказку", "Вернуться"]
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     keyboard.add(*button)
+    if message.text == "Взять подсказку":
+        Words.used_cities.append(answer)
+        await hint
     if message.text == "Вернуться":
         await Forms.start.set()
         await go_back
@@ -285,17 +291,18 @@ async def playing_cities_sequence(message: types.Message, state: FSMContext):
         await message.reply("Это уже было. Напиши другой город.",
                             reply_markup=keyboard, parse_mode="Markdown")
     else:
-        Words.used_cities.append(message.text)
-        check_word = await state.get_data()
-        if check_word['word'][-1] != message.text.lower()[0]:
-            await message.reply("Этот город не подходит! Напиши другой на букву *" + str(check_word['word'][-1]) + "*",
-                                reply_markup=keyboard, parse_mode="Markdown")
+        check_city = await state.get_data()
+        if check_city['city'][-1] != message.text[0].lower():
+            await message.reply("Этот город не подходит! Напиши другой на букву *" + str(Words.used_cities[-1][-1]) +
+                                "*", reply_markup=keyboard, parse_mode="Markdown")
         else:
             await Forms.cities_sequence.set()
-            await state.update_data(word=check_word['word'])
+            await state.update_data(word=check_city['city'])
             answer = games_code.words_sequence(message.text, games_code.cities_list, Words.used_cities)
             Words.used_cities.append(answer)
 
+            if message.text == "Взять подсказку":
+                await hint
             if message.text == "Вернуться":
                 await Forms.start.set()
                 await go_back
@@ -303,22 +310,11 @@ async def playing_cities_sequence(message: types.Message, state: FSMContext):
                 if answer[-1] in games_code.banned_letters:
                     answer_cut = answer[:-1]
                     async with state.proxy() as current_city:
-                        current_city['word'] = answer_cut
+                        current_city['city'] = answer_cut
                 else:
                     async with state.proxy() as current_city:
-                        current_city['word'] = answer
+                        current_city['city'] = answer
                 await message.reply("*" + answer + "*", parse_mode="Markdown", reply_markup=keyboard)
-                # start_timer = 30
-                # timer_message = await bot.send_message(chat_id=message.chat.id, text=f"Осталось {start_timer} секунд")
-                # zero_timer_check = 0
-                # for seconds_left in range(start_timer - 1, -1, -1):
-                #     await asyncio.sleep(1)
-                #     await timer_message.edit_text(f"Осталось *{seconds_left}* секунд", parse_mode="Markdown")
-                #     if seconds_left == 0:
-                #         zero_timer_check += 1
-                # if zero_timer_check == 1:
-                #     await bot.send_message(chat_id=message.chat.id, text="Время вышло. "
-                #                            "*Вы проиграли!*", parse_mode="Markdown", reply_markup=keyboard)
                 if len(answer) == 0:
                     await bot.send_message(chat_id=message.chat.id, text="Я не могу найти подходящего города, "
                                                                          "а это значит, что ты победил.\n\n\n"
@@ -326,6 +322,7 @@ async def playing_cities_sequence(message: types.Message, state: FSMContext):
                 Words.used_cities.append(answer)
                 Words.used_cities.append(message.text)
                 await Forms.playing_cities_sequence.set()
+
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
